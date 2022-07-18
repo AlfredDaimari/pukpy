@@ -108,7 +108,7 @@ class YdJammingThread(threading.Thread):
         self.jam_ev.unset_jamming()
 
 
-class RfMessage:
+class RfKeyFob:
     """
     create an instance of rf message
     """
@@ -131,7 +131,7 @@ class RfMessage:
 
         """
         kfb_byte_list = []
-        for kfb in self.message:
+        for kfb in self.kfb_list:
             kfb.convert_to_hex()
             packed_msg = bytes.fromhex(kfb.conc_pkts())
             kfb_byte_list.append(packed_msg)
@@ -140,7 +140,7 @@ class RfMessage:
 
     def send(self) -> None:
         """
-        sends message using the yardstick
+        sends key fob using the yardstick
         """
         kfb_byte_arr = self.__create_dispatchable_kfbs()
         self.fn(self.cfg, kfb_byte_arr)
@@ -232,7 +232,7 @@ class YdStick:
         sleep(0.1)
         self.yd_jam_thread = None
 
-    def create_rf_kfbs(self, cfg: YdStickConfig, kfb_list: List[KeyFobPacket]) -> RfMessage:
+    def create_rf_kfbs(self, cfg: YdStickConfig, kfb_list: List[KeyFobPacket]) -> RfKeyFob:
         """
         :param cfg: yd_stick config for message
         :param kfb_list: list of key fobs to be sent
@@ -245,4 +245,4 @@ class YdStick:
         if not isinstance(kfb_list[0], KeyFobPacket):
             raise TypeError("msg is not an instance of KeyFobPacket")
 
-        return RfMessage(cfg, kfb_list, self.__send_kfbs)
+        return RfKeyFob(cfg, kfb_list, self.__send_kfbs)
