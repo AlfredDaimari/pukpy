@@ -2,7 +2,7 @@ import threading
 from time import sleep
 from typing import Callable, List
 from rflib import *
-from keyfob import KeyFobPacket
+from cars.keyfob import KeyFobPacket
 
 
 class YdSendingEvent(threading.Event):
