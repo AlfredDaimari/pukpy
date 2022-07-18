@@ -64,7 +64,7 @@ class YdStickConfig:
     class to hold yd_stick configs
     """
 
-    def __init__(self, mod_type: MOD_ASK_OOK, freq_hz: 433000000, channel: 1, sync_mode: 0, baud_rate: 2500):
+    def __init__(self, mod_type=MOD_ASK_OOK, freq_hz=433000000, channel=1, sync_mode=0, baud_rate=2500):
         """
         :param mod_type: modulation type for signal
         :param freq_hz: frequency in hz
@@ -90,6 +90,7 @@ class YdJammingThread(threading.Thread):
         :param id_: name of thread
         :param jam_ev: event which controls opening and closing of thread
         """
+        threading.Thread.__init__(self)
         self.name = id_
         if not isinstance(jam_ev, YdJammingEvent):
             raise TypeError("jam_ev is not an instance of YdJammingEvent")
@@ -113,18 +114,18 @@ class RfKeyFob:
     create an instance of rf message
     """
 
-    def __init__(self, cfg: YdStickConfig, kfb_list: List[KeyFobPacket], fn: Callable) -> None:
+    def __init__(self, kfb_list: List[KeyFobPacket], fn: Callable) -> None:
         """
         create rf message \n
         :param kfb_list: list of key fobs to be sent
         :param fn: the dev fn to be called during sending
         """
 
-        self.cfg = cfg
+        self.cfg = kfb_list[-1].cfg
         self.kfb_list = kfb_list
         self.fn = fn
 
-    def __create_dispatchable_kfbs(self) -> List[str]:
+    def __create_dispatchable_kfbs(self) -> List[bytes]:
         """
         create a dispatchable rf message
         :return: returns [kfb1, kfb2, kfb3, ...]
@@ -133,7 +134,7 @@ class RfKeyFob:
         kfb_byte_list = []
         for kfb in self.kfb_list:
             kfb.convert_to_hex()
-            packed_msg = bytes.fromhex(kfb.conc_pkts())
+            packed_msg = bytes.fromhex(kfb.concat_bpk_list())
             kfb_byte_list.append(packed_msg)
 
         return kfb_byte_list
@@ -245,4 +246,4 @@ class YdStick:
         if not isinstance(kfb_list[0], KeyFobPacket):
             raise TypeError("msg is not an instance of KeyFobPacket")
 
-        return RfKeyFob(cfg, kfb_list, self.__send_kfbs)
+        return RfKeyFob(kfb_list, self.__send_kfbs)

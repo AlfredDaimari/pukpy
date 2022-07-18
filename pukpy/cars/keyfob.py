@@ -8,6 +8,7 @@
 #
 
 from typing import List
+from ..ydstick import YdStickConfig
 
 
 class BitPack:
@@ -111,8 +112,9 @@ class KeyFobPacket:
     pk_recv_time: the time received (unix time ns format)
     """
 
-    def __init__(self, kfb_list: List[str], kfb_type: str, bpk_recv_time: int) -> None:
+    def __init__(self, cfg: YdStickConfig, kfb_list: List[str], kfb_type: str, bpk_recv_time: int) -> None:
         """
+        :param cfg: yd_stick configuration
         :param kfb_list: ['1000101:0', '1010101:45'] format
         :param kfb_type: key fob type
         :param bpk_recv_time: time bpk was received in unix ns
@@ -124,14 +126,15 @@ class KeyFobPacket:
         self.bpk_list = [BitPack(bpk_s[0], int(bpk_s[1])) for bpk_s in bpk_split]
 
         self.bpk_recv_time = bpk_recv_time
+        self.cfg = cfg
 
     def __len__(self):
-        return len(self.packets)
+        return len(self.bpk_list)
 
     def __str__(self):
         str_ = "\n"
-        for i in range(len(self.packets)):
-            str_ += self.packets[i].__str__() + f" ----- {i + 1} \n"
+        for i in range(len(self.bpk_list)):
+            str_ += self.bpk_list[i].__str__() + f" ----- {i + 1} \n"
         return str_
 
     def __clean(self):

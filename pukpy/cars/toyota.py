@@ -1,5 +1,6 @@
 from typing import List
 from keyfob import KeyFobPacket
+from ..ydstick import YdStickConfig
 
 
 class InnovaKeyFobPacket(KeyFobPacket):
@@ -8,7 +9,8 @@ class InnovaKeyFobPacket(KeyFobPacket):
     """
 
     def __init__(self, kfb_list: List[str], kfb_type: str, bpk_recv_time: int) -> None:
-        KeyFobPacket.__init__(self, kfb_list, kfb_type, bpk_recv_time)
+        cfg = YdStickConfig()
+        KeyFobPacket.__init__(self, cfg, kfb_list, kfb_type, bpk_recv_time)
         self.__clean()
 
     def __clean(self):
