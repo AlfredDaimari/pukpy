@@ -3,7 +3,6 @@ from typing import List
 from termcolor import cprint
 from rf import RfSender, RfMessage, MOD_ASK_OOK
 from keyfob import InnovaKeyFobPacket, MarutiNipponKeyFobPacket, KeyFobPacket
-from jammer import *
 
 # TODO: improve readability
 
@@ -27,9 +26,6 @@ class RollingKeyFobs:
         print("the yardstick has been initialized")
 
         # TODO: configure for raspberry bi
-        # self.jammer = Jammer("input_file", "mode", "freq", "sample")
-        print("the jammer has been initialized")
-        # self.jammer.start()
 
     def __len__(self):
         return len(self.key_fobs_list)
