@@ -171,6 +171,6 @@ class KeyFobPacket:
     def filter(cls, kfb_bb: List[str]) -> List[List[str]]:
         """
         :param kfb_bb: key fob bit buffer
-        :return: List of kfb_list
+        :return: list of kfb_bb
         """
         pass

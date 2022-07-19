@@ -1,10 +1,11 @@
 from time import time_ns as tns
 from typing import List
 from termcolor import cprint
-from rf import RfSender, RfMessage, MOD_ASK_OOK
-from keyfob import InnovaKeyFobPacket, MarutiNipponKeyFobPacket, KeyFobPacket
-
-# TODO: improve readability
+from rflib import *
+from ydstick import YdStick, YdSendingEvent
+from cars.maruti import MarutiNipponKeyFobPacket
+from cars.toyota import InnovaKeyFobPacket
+from cars.keyfob import KeyFobPacket
 
 CAR_FOBS = {
     "toyota_innova": InnovaKeyFobPacket,
@@ -19,31 +20,70 @@ class RollingKeyFobs:
     structure of key fobs [[KeyFobPacket, KeyFobPacket,...], [KeyFobPacket, ...]]
     """
 
-    def __init__(self) -> None:
-        self.key_fobs_list = []
+    def __init__(self, yd_bool: bool) -> None:
+        self.rolling_kfb_list = []
 
-        self.yd_stick = RfSender()  # RfSender()
+        self.yd_stick = YdStick(init=yd_bool)
+        self.__yd_sending = YdSendingEvent()
         print("the yardstick has been initialized")
 
-        # TODO: configure for raspberry bi
+    def __len__(self) -> int:
+        return len(self.rolling_kfb_list)
 
-    def __len__(self):
-        return len(self.key_fobs_list)
-
-    def __str__(self):
+    def __str__(self) -> str:
         str_ = ""
-        for key_fb_list in self.key_fobs_list:
-            for key_fb in key_fb_list:
-                str_ += str(key_fb)
+        for kfb_list in self.rolling_kfb_list:
+            for kfb in kfb_list:
+                str_ += str(kfb)
             str_ += "\n--  next key fob --  \n"
         return str_
+
+    def __shift(self) -> List[KeyFobPacket]:
+        """
+        dequeue the first element from key fob
+        """
+        return self.rolling_kfb_list.pop(0)
+
+    def __create_tmp_kfb_list(self, kfb_bb: List[str], kfb_type: str, bpk_recv_time: int) \
+            -> List[KeyFobPacket]:
+        """
+        :param kfb_bb: in form [100001:1, 10000:23]
+        :param kfb_type: key fob type
+        :param bpk_recv_time: time received
+        :return: List[KeyFobPacket]
+        """
+        flt_kfb_bb_list = CAR_FOBS[kfb_type].filter(kfb_bb)
+        kfb_list = []
+        for kfb in flt_kfb_bb_list:
+            kfb_list.append(CAR_FOBS[kfb_type](kfb, kfb_type, bpk_recv_time))
+        return kfb_list
+
+    def __get_rolling_kfb_type(self) -> str:
+        """
+        :return: type of key fobs inside rolling key fob ds
+        """
+        return self.rolling_kfb_list[-1][-1].kfb_type
+
+    @property
+    def sending(self) -> bool:
+        """
+        is yd_stick sending or not
+        :return: True or False
+        """
+        return self.__yd_sending.is_set()
+
+    def get_lst_kfb_recv_time(self) -> int:
+        """
+        :return: receiving time in unix ns of last rolling key_fob_packet
+        """
+        return self.rolling_kfb_list[-1][-1].bpk_recv_time
 
     def pp_print(self, index) -> None:
         """
         printing for debugging
         :param index: the key fob to print from
         """
-        for key_fob in self.key_fobs_list[index]:
+        for key_fob in self.rolling_kfb_list[index]:
             cprint(key_fob, "yellow", "on_blue")
             cprint(f"-- next key fob in index {index} --", "white", "on_green")
 
@@ -68,16 +108,11 @@ class RollingKeyFobs:
         """
         if len(self) > 1:
             cur_time = tns()
-            if (cur_time - self.key_fobs_list[-1][-1].pk_recv_time) > 800000000:
+            lst_kfb_list_time = self.get_lst_kfb_recv_time()
+            if (cur_time - lst_kfb_list_time) > 800000000:
                 return True
 
         return False
-
-    def __shift(self):
-        """
-        remove the first element from key fob
-        """
-        return self.key_fobs_list.pop(0)
 
     def dequeue_send(self) -> None:
         """
@@ -88,54 +123,43 @@ class RollingKeyFobs:
         kfbs_to_be_sent = self.__shift()
         print("\n")  # new line
 
-        # TODO: connect with RfMessage
-        rf_message = RfMessage(kfbs_to_be_sent, MOD_ASK_OOK, 2500, 1, self.yd_stick)
-        # self.jam.stop()
-        rf_message.send()
-        # self.jam.start()
+        rf_kfb = self.yd_stick.create_rf_kfbs(kfbs_to_be_sent)
+
+        # stop jamming -> start sending -> stop sending -> begin jamming
+        self.yd_stick.stop_jamming()
+        self.__yd_sending.set_sending()
+        rf_kfb.send()
+        self.__yd_sending.unset_sending()
+        self.yd_stick.begin_jamming()
 
         cprint("current rolling key_fobs struct", "yellow")
         self.pp_print_all()
 
-        del kfbs_to_be_sent
-
-    def __create_tmp_kfb_pkt_list(self, flt_key_fb_packet: List[str], car_name: str, pk_recv_time: int) \
-            -> List[KeyFobPacket]:
-        """
-        :param flt_key_fb_packet: filtered key fob packet, by the car class
-        :param car_name: you know what it is
-        :param pk_recv_time: time received
-        :return: List[KeyFobPacket]
-        """
-        kfb_list = []
-        for key_fb in flt_key_fb_packet:
-            kfb_list.append(CAR_FOBS[car_name](key_fb, car_name, pk_recv_time))
-        return kfb_list
-
-    def push(self, key_fb_packet: List[str]) -> None:
+    def push(self, kfb_bb: List[str], kfb_type: str) -> None:
         """
         add a new key fob to list or concatenate with previous key fob \n
-        :param key_fb_packet: a list in the form ["bits:gap", "bits:gap", "name_of_car"]
+        :param kfb_bb: a list in the form ["bits:gap", "bits:gap"]
+        :param kfb_type: type of key fob
+        :return None
         """
 
-        if len(key_fb_packet) < 2:
+        if len(kfb_bb) < 1:
             cprint("key fob packet is not valid. dropping key fob packet", "white", "on_red")
 
         cur_time = tns()
-        flt_key_fb_packets = CAR_FOBS[key_fb_packet[-1]].filter(key_fb_packet[:-1])
-        tmp_kfb_list = self.__create_tmp_kfb_pkt_list(flt_key_fb_packets, key_fb_packet[-1], cur_time)
+        tmp_kfb_list = self.__create_tmp_kfb_list(kfb_bb, kfb_type, cur_time)
 
-        if len(self.key_fobs_list) == 0:
-            self.key_fobs_list = [tmp_kfb_list]
-            cprint(f"first key fob packet received of type {key_fb_packet[-1]}", "white", "on_yellow")
+        if len(self.rolling_kfb_list) == 0:
+            self.rolling_kfb_list = [tmp_kfb_list]
+            cprint(f"first key fob packet received of type {kfb_type}", "white", "on_yellow")
         else:
-            if self.key_fobs_list[-1][-1].name != key_fb_packet[-1]:
+            if self.__get_rolling_kfb_type() != kfb_type:
                 cprint("key fob packet is not the same type as previous. dropping key fob packet", "white", "on_red")
 
-            elif (cur_time - self.key_fobs_list[-1][-1].pk_recv_time) < 1000000000:
-                self.key_fobs_list[-1] += tmp_kfb_list
+            elif (cur_time - self.get_lst_kfb_recv_time()) < 1000000000:
+                self.rolling_kfb_list[-1] += tmp_kfb_list
                 cprint("appending to previous packet", "white", "on_yellow")
 
             else:
-                self.key_fobs_list.append(tmp_kfb_list)
+                self.rolling_kfb_list.append(tmp_kfb_list)
                 cprint("new key fob packet received", "white", "on_yellow")

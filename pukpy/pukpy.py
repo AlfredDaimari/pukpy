@@ -3,11 +3,10 @@
 import threading
 import signal
 from time import sleep
-from rf import YDSendPacketEvent
 from rolling_keyfobs import RollingKeyFobs
-from puck_bits_receiver import PuckBitsReceiverThread
+from puck_bits_receiver import PuckReceiverThread
 from puck_bits_sender import PuckBitsYdSenderThread
-from service_exit import ServiceExit
+from errors.service_exit import ServiceExit
 
 
 def sigint_handler(signal_, frame):
@@ -15,16 +14,15 @@ def sigint_handler(signal_, frame):
     raise ServiceExit
 
 
-if __name__ == "__main__":
+def main() -> None:
     signal.signal(signal.SIGINT, sigint_handler)
 
-    rolling_key_fobs = RollingKeyFobs()
-    lock = threading.RLock()
+    rolling_kfb = RollingKeyFobs()
+    rkfb_lock = threading.RLock()
 
     try:
-        yd_sending = YDSendPacketEvent()
-        thread1 = PuckBitsReceiverThread("thread1", lock, rolling_key_fobs, yd_sending)
-        thread2 = PuckBitsYdSenderThread("thread2", lock, rolling_key_fobs, yd_sending)
+        thread1 = PuckReceiverThread("thread1", rkfb_lock, rolling_kfb)
+        thread2 = PuckBitsYdSenderThread("thread2", rkfb_lock, rolling_kfb)
         thread1.start()
         thread2.start()
 
@@ -39,3 +37,6 @@ if __name__ == "__main__":
 
         thread1.join()
         thread2.join()
+
+
+main()

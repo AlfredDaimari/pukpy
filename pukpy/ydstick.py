@@ -1,4 +1,5 @@
 import threading
+from termcolor import cprint
 from time import sleep
 from typing import Callable, List
 from rflib import *
@@ -216,12 +217,14 @@ class YdStick:
         start jamming using the yard stick
         :return: None
         """
+
         jam_cfg = YdStickConfig()
         self.__update_yd_stick_cfg(jam_cfg)
         jam_ev = YdJammingEvent()
         jam_ev.set_jamming()
         self.yd_jam_thread = YdJammingThread('jam_th', jam_ev, self.__jam_fn)
         self.yd_jam_thread.start()
+        cprint("started jamming", "white", "on_blue")
 
     def stop_jamming(self) -> None:
         """
@@ -232,16 +235,13 @@ class YdStick:
         self.yd_jam_thread.join()
         sleep(0.1)
         self.yd_jam_thread = None
+        cprint("stopped jamming", "white", "on_blue")
 
-    def create_rf_kfbs(self, cfg: YdStickConfig, kfb_list: List[KeyFobPacket]) -> RfKeyFob:
+    def create_rf_kfbs(self, kfb_list: List[KeyFobPacket]) -> RfKeyFob:
         """
-        :param cfg: yd_stick config for message
         :param kfb_list: list of key fobs to be sent
-        :return: None
+        :return: instance of RfKeyFob
         """
-
-        if not isinstance(cfg, YdStickConfig):
-            raise TypeError("cfg is not instance of YdStickConfig")
 
         if not isinstance(kfb_list[0], KeyFobPacket):
             raise TypeError("msg is not an instance of KeyFobPacket")

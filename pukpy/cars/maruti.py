@@ -27,10 +27,10 @@ class MarutiNipponKeyFobPacket(KeyFobPacket):
     @classmethod
     def filter(cls, kfb_bb: List[str]) -> List[List[str]]:
         # TODO: add more filters
-        kfb_list = []
+        kfb_bb_list = []
         for i in range(1, len(kfb_bb), 2):
-            kfb_list.append([kfb_bb[i - 1], kfb_bb[i]])
-        return kfb_list
+            kfb_bb_list.append([kfb_bb[i - 1], kfb_bb[i]])
+        return kfb_bb_list
 
     def concat_bpk_list(self) -> str:
         str_ = self.bpk_list[0].bpk

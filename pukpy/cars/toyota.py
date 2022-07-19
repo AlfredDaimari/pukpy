@@ -24,11 +24,11 @@ class InnovaKeyFobPacket(KeyFobPacket):
 
     @classmethod
     def filter(cls, kfb_bb: List[str]) -> List[List[str]]:
-        kfb_list = []
+        kfb_bb_list = []
         for kfb_row in kfb_bb:
             if len(kfb_row.split(":")[0]) >= 236:
-                kfb_list.append([kfb_row])
-        return kfb_list
+                kfb_bb_list.append([kfb_row])
+        return kfb_bb_list
 
     def concat_bpk_list(self) -> str:
-        return self.packets[0].bit_pk + ("0" * 4)
+        return self.bpk_list[0].bpk + ("0" * 4)

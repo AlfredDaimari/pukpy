@@ -11,7 +11,6 @@
 
 import threading
 from time import sleep
-from rf import YDSendPacketEvent
 from rolling_keyfobs import RollingKeyFobs
 
 
@@ -21,39 +20,33 @@ class PuckBitsYdSenderThread(threading.Thread):
     checks every 0.35s if there is a valid key fob to send
     """
 
-    def __init__(self, name: str, lock: threading.RLock, rolling_key_fobs: RollingKeyFobs,
-                 yd_sending: YDSendPacketEvent) -> None:
+    def __init__(self, id_: str, rkfb_lock: threading.RLock, rolling_kfb: RollingKeyFobs) -> None:
         """
-        :param name: name of thread
-        :param lock: lock for accessing rolling_key_fobs
+        :param id_: name of thread
+        :param rkfb_lock: lock for accessing rolling_key_fobs
+        :param rolling_kfb: rolling key fob ds
         """
-        if not isinstance(rolling_key_fobs, RollingKeyFobs):
-            raise TypeError("rolling_key_fob is not an instance of RollingKeyFobs")
+        if not isinstance(rolling_kfb, RollingKeyFobs):
+            raise TypeError("rolling_kfb is not an instance of RollingKeyFobs")
 
         t_type = type(threading.RLock())
-        if not isinstance(lock, t_type):
-            raise TypeError("lock is not an instance of threading.RLock")
-
-        if not isinstance(yd_sending, YDSendPacketEvent):
-            raise TypeError('yd_sending is not an instance of YDSendPacketEvent')
+        if not isinstance(rkfb_lock, t_type):
+            raise TypeError("rkfb_lock is not an instance of threading.RLock")
 
         threading.Thread.__init__(self)
-        self.name = name
-        self.lock = lock
-        self.rolling_key_fobs = rolling_key_fobs
-        self.yd_sending = yd_sending
+        self.name = id_
+        self.lock = rkfb_lock
+        self.rolling_kfb = rolling_kfb
         self.shutdown = threading.Event()
 
     def run(self) -> None:
         while not self.shutdown.is_set():
+
             self.lock.acquire()
-
-            if self.rolling_key_fobs.dispatchable:
-                self.yd_sending.set_sending()
-                self.rolling_key_fobs.dequeue_send()
-                self.yd_sending.unset_sending()
-
+            if self.rolling_kfb.dispatchable:
+                self.rolling_kfb.dequeue_send()
             self.lock.release()
+
             sleep(0.35)
 
     def shutdown_thread(self):

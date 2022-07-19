@@ -16,19 +16,22 @@ from gi.repository import GLib
 from datetime import datetime
 from termcolor import cprint
 from rolling_keyfobs import RollingKeyFobs
-from rf import YDSendPacketEvent
 
 OPATH = "/org/autosec/PuckBitsReceiver"
 IFACE = "org.autosec.PuckBitsReceiverInterface"
 BUS_NAME = "org.autosec.PuckBitsReceiver"
 
 
-class PuckBitsReceiver(dbus.service.Object):
+class PuckReceiver(dbus.service.Object):
     """
-    For creating a rf bits listener service on dbus
+    creating a rf bits listener, puck command listener service on dbus
     """
 
-    def __init__(self, lock: threading.RLock, rolling_key_fobs: RollingKeyFobs, yd_sending: YDSendPacketEvent) -> None:
+    def __init__(self, rkfb_lock: threading.RLock, rolling_kfb: RollingKeyFobs) -> None:
+        """
+        :param rkfb_lock: rolling key fob lock
+        :param rolling_kfb: instance of rolling key fobs ds
+        """
         DBusGMainLoop(set_as_default=True)
         bus = dbus.SystemBus()
         bus.request_name(BUS_NAME)
@@ -36,9 +39,8 @@ class PuckBitsReceiver(dbus.service.Object):
         dbus.service.Object.__init__(self, bus_name, OPATH)
         print("the dbus has been initialized")
 
-        self.lock = lock
-        self.rolling_key_fobs = rolling_key_fobs
-        self.yd_sending = yd_sending
+        self.rkfb_lock = rkfb_lock
+        self.rolling_kfb = rolling_kfb
 
     @dbus.service.method(dbus_interface=IFACE, in_signature="s", out_signature="s", sender_keyword="sender",
                          connection_keyword="conn")
@@ -50,45 +52,59 @@ class PuckBitsReceiver(dbus.service.Object):
         dt_string = now.strftime("%H:%M:%S %d/%m/%Y")
         cprint(f"received: {bits} at {dt_string}", "white", "on_yellow")
 
-        # only push bits when yard stick is not sending, else we may capture the sent-out bits
-        if not self.yd_sending.is_set():
+        # only push bits when yard stick is not sending ( we may capture our own sent-out bits )
+        if not self.rolling_kfb.sending:
             self.lock.acquire()
-            self.rolling_key_fobs.push(bits.split('-'))
+
+            bits_spl = bits.split('-')
+            kfb_type = bits_spl[-1]
+            kfb_bb = bits_spl[:-1]
+            self.rolling_kfb.push(kfb_bb, kfb_type)
+
             self.lock.release()
         else:
             cprint("received packets while yd_stick was sending, dropping erroneous packets", "white", "on_red")
 
         return "saibo"
 
+    @dbus.service.method(dbus_interface=IFACE, in_signature='s', out_signature='s', sender_keyword="sender",
+                         connection_keyword="conn")
+    def ExecuteCommand(self, com: str, sender=None, conn=None):
+        """
+        receiver function for commands
+        """
+        to_send = 'error: no such command'
+        return to_send
 
-class PuckBitsReceiverThread(threading.Thread):
+
+class PuckReceiverThread(threading.Thread):
     """
     Puck bits receiver thread,
     received bit packets and stores it withing rolling key fobs
     """
 
-    def __init__(self, name: str, lock: threading.RLock, rolling_key_fobs: RollingKeyFobs,
-                 yd_sending: YDSendPacketEvent) -> None:
+    def __init__(self, id_: str, rkfb_lock: threading.RLock, rolling_kfb: RollingKeyFobs) -> None:
+        """
+        :param id_: name of thread
+        :param rkfb_lock: rolling key fob lock
+        :param rolling_kfb: instance of rolling key fobs ds
+        """
         threading.Thread.__init__(self)
 
         t_type = type(threading.RLock())
-        if not isinstance(lock, t_type):
-            raise TypeError("lock is not an instance of threading.RLock")
+        if not isinstance(rkfb_lock, t_type):
+            raise TypeError("rkfb_lock is not an instance of threading.RLock")
 
-        if not isinstance(rolling_key_fobs, RollingKeyFobs):
-            raise TypeError("rolling_key_fobs is not an instance of RollingKeyFobs")
+        if not isinstance(rolling_kfb, RollingKeyFobs):
+            raise TypeError("rolling_kfb is not an instance of RollingKeyFobs")
 
-        if not isinstance(yd_sending, YDSendPacketEvent):
-            raise TypeError("yd_sending is not an instance of YDSendPacketEvent")
-
-        self.name = name
-        self.lock = lock
-        self.rolling_key_fobs = rolling_key_fobs
+        self.name = id_
+        self.rkfb_lock = rkfb_lock
+        self.rolling_kfb = rolling_kfb
         self.mainloop = GLib.MainLoop()
-        self.yd_sending = yd_sending
 
     def run(self) -> None:
-        puck_bits_receiver = PuckBitsReceiver(self.lock, self.rolling_key_fobs, self.yd_sending)
+        puck_receiver = PuckReceiver(self.rkfb_lock, self.rolling_kfb)
         self.mainloop.run()
 
     def shutdown_thread(self):
