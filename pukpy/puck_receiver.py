@@ -73,8 +73,14 @@ class PuckReceiver(dbus.service.Object):
         """
         receiver function for commands
         """
-        to_send = 'error: no such command'
-        return to_send
+        msg = 'error: no such command'
+
+        if com == "view-rkfb":
+            self.rkfb_lock.acquire()
+            msg = self.rolling_kfb.to_json()
+            self.rkfb_lock.release()
+
+        return msg
 
 
 class PuckReceiverThread(threading.Thread):

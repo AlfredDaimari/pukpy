@@ -7,6 +7,7 @@
 #    (at your option) any later version.
 #
 
+import json
 from typing import List
 from .yd_config import YdStickConfig
 
@@ -139,6 +140,16 @@ class KeyFobPacket:
 
     def __clean(self):
         pass
+
+    def to_kfb_str(self) -> List[str]:
+        """
+        converts back to kfb str rep
+        :return: ["bits:time", "bits:time"]
+        """
+        tmp_kfb_list = []
+        for bpk in self.bpk_list:
+            tmp_kfb_list.append(f"{str(bpk)}:{bpk.time_to_prev_bitpk}")
+        return tmp_kfb_list
 
     def convert_to_hex(self) -> None:
         """

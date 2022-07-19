@@ -1,3 +1,4 @@
+import json
 from time import time_ns as tns
 from typing import List
 from termcolor import cprint
@@ -96,6 +97,19 @@ class RollingKeyFobs:
             self.pp_print(i)
             cprint(f"next key fob VVV in index {i + 1}", "green")
         print("\n")
+
+    def to_json(self) -> str:
+        """
+        convert to rolling key fobs to json representation
+        :return: json representation of rolling key fobs '[[["bits:gap", "bits:gap",..],[..]], [[..],[..]],..]'
+        """
+        list_to_json = []
+        for kfb_list in self.rolling_kfb_list:
+            kfb_list_str = []
+            for kfb in kfb_list:
+                kfb_list_str.append(kfb.to_kfb_str())
+            list_to_json.append(kfb_list_str)
+        return json.dumps(list_to_json)
 
     @property
     def dispatchable(self) -> bool:
