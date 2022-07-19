@@ -163,7 +163,7 @@ class KeyFobPacket:
 
     def concat_bpk_list(self) -> str:
         """
-        :return: string of concatenated packets
+        :return: string of concatenated packets (performs this after hex conversion)
         """
         pass
 
