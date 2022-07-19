@@ -2,8 +2,9 @@ import threading
 from termcolor import cprint
 from time import sleep
 from typing import Callable, List
-from rflib import *
-from cars.keyfob import KeyFobPacket
+from rflib import RfCat
+from cars import yd_config as ycfg
+from cars import keyfob as kfb
 
 
 class YdSendingEvent(threading.Event):
@@ -60,27 +61,6 @@ class YdJammingEvent(threading.Event):
         self.clear()
 
 
-class YdStickConfig:
-    """
-    class to hold yd_stick configs
-    """
-
-    def __init__(self, mod_type=MOD_ASK_OOK, freq_hz=433000000, channel=1, sync_mode=0, baud_rate=2500):
-        """
-        :param mod_type: modulation type for signal
-        :param freq_hz: frequency in hz
-        :param channel: channel for yd_stick
-        :param sync_mode: defaults to 0
-        :param baud_rate: information rate
-        :return: None
-        """
-        self.mod_type = mod_type
-        self.freq_hz = freq_hz
-        self.channel = channel
-        self.sync_mode = sync_mode
-        self.baud_rate = baud_rate
-
-
 class YdJammingThread(threading.Thread):
     """
     yard stick jamming thread
@@ -115,7 +95,7 @@ class RfKeyFob:
     create an instance of rf message
     """
 
-    def __init__(self, kfb_list: List[KeyFobPacket], fn: Callable) -> None:
+    def __init__(self, kfb_list: List[kfb.KeyFobPacket], fn: Callable) -> None:
         """
         create rf message \n
         :param kfb_list: list of key fobs to be sent
@@ -160,7 +140,7 @@ class YdStick:
         self.yd_stick = RfCat() if init else None
         self.yd_jam_thread = None
 
-    def __update_yd_stick_cfg(self, cfg: YdStickConfig) -> None:
+    def __update_yd_stick_cfg(self, cfg: ycfg.YdStickConfig) -> None:
         """
         :param cfg: instance of YdStickConfig
         :return: None
@@ -175,7 +155,7 @@ class YdStick:
             self.yd_stick.setMdmDRate(cfg.baud_rate)
             self.yd_stick.setModeTX()
 
-    def __send_kfbs(self, cfg: YdStickConfig, kfb_byte_list: List[str]) -> None:
+    def __send_kfbs(self, cfg: ycfg.YdStickConfig, kfb_byte_list: List[str]) -> None:
         """
         Send a message using the rf device \n
         :param cfg: yd_stick configs
@@ -218,7 +198,7 @@ class YdStick:
         :return: None
         """
 
-        jam_cfg = YdStickConfig()
+        jam_cfg = ycfg.YdStickConfig()
         self.__update_yd_stick_cfg(jam_cfg)
         jam_ev = YdJammingEvent()
         jam_ev.set_jamming()
@@ -237,13 +217,13 @@ class YdStick:
         self.yd_jam_thread = None
         cprint("stopped jamming", "white", "on_blue")
 
-    def create_rf_kfbs(self, kfb_list: List[KeyFobPacket]) -> RfKeyFob:
+    def create_rf_kfbs(self, kfb_list: List[kfb.KeyFobPacket]) -> RfKeyFob:
         """
         :param kfb_list: list of key fobs to be sent
         :return: instance of RfKeyFob
         """
 
-        if not isinstance(kfb_list[0], KeyFobPacket):
+        if not isinstance(kfb_list[0], kfb.KeyFobPacket):
             raise TypeError("msg is not an instance of KeyFobPacket")
 
         return RfKeyFob(kfb_list, self.__send_kfbs)

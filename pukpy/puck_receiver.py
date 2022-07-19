@@ -15,7 +15,7 @@ from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
 from datetime import datetime
 from termcolor import cprint
-from rolling_keyfobs import RollingKeyFobs
+import rolling_keyfobs as rkfb
 
 OPATH = "/org/autosec/PuckBitsReceiver"
 IFACE = "org.autosec.PuckBitsReceiverInterface"
@@ -27,7 +27,7 @@ class PuckReceiver(dbus.service.Object):
     creating a rf bits listener, puck command listener service on dbus
     """
 
-    def __init__(self, rkfb_lock: threading.RLock, rolling_kfb: RollingKeyFobs) -> None:
+    def __init__(self, rkfb_lock: threading.RLock, rolling_kfb: rkfb.RollingKeyFobs) -> None:
         """
         :param rkfb_lock: rolling key fob lock
         :param rolling_kfb: instance of rolling key fobs ds
@@ -83,7 +83,7 @@ class PuckReceiverThread(threading.Thread):
     received bit packets and stores it withing rolling key fobs
     """
 
-    def __init__(self, id_: str, rkfb_lock: threading.RLock, rolling_kfb: RollingKeyFobs) -> None:
+    def __init__(self, id_: str, rkfb_lock: threading.RLock, rolling_kfb: rkfb.RollingKeyFobs) -> None:
         """
         :param id_: name of thread
         :param rkfb_lock: rolling key fob lock
@@ -95,7 +95,7 @@ class PuckReceiverThread(threading.Thread):
         if not isinstance(rkfb_lock, t_type):
             raise TypeError("rkfb_lock is not an instance of threading.RLock")
 
-        if not isinstance(rolling_kfb, RollingKeyFobs):
+        if not isinstance(rolling_kfb, rkfb.RollingKeyFobs):
             raise TypeError("rolling_kfb is not an instance of RollingKeyFobs")
 
         self.name = id_

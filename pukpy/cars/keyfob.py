@@ -8,7 +8,7 @@
 #
 
 from typing import List
-from ..ydstick import YdStickConfig
+from .yd_config import YdStickConfig
 
 
 class BitPack:

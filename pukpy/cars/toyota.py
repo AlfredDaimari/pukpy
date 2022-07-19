@@ -1,6 +1,6 @@
 from typing import List
-from keyfob import KeyFobPacket
-from ..ydstick import YdStickConfig
+from .keyfob import KeyFobPacket
+from .yd_config import YdStickConfig
 
 
 class InnovaKeyFobPacket(KeyFobPacket):

@@ -2,10 +2,12 @@
 
 import threading
 import signal
+import argparse
+
 from time import sleep
-from rolling_keyfobs import RollingKeyFobs
-from puck_bits_receiver import PuckReceiverThread
-from puck_bits_sender import PuckBitsYdSenderThread
+import rolling_keyfobs as rkfb
+from puck_receiver import PuckReceiverThread
+from puck_sender import PuckBitsYdSenderThread
 from errors.service_exit import ServiceExit
 
 
@@ -14,10 +16,21 @@ def sigint_handler(signal_, frame):
     raise ServiceExit
 
 
+def args_handler() -> argparse.Namespace:
+    """
+    :return: arguments from the terminal
+    """
+    # TODO: add more configs (jamming configs, sending configs, etc)
+    parser = argparse.ArgumentParser("yd_stick configuration")
+    parser.add_argument('--nyd', help='prevent use of yd_stick', action='store_false')
+    args = parser.parse_args()
+    return args
+
+
 def main() -> None:
     signal.signal(signal.SIGINT, sigint_handler)
-
-    rolling_kfb = RollingKeyFobs()
+    args = args_handler()
+    rolling_kfb = rkfb.RollingKeyFobs(yd_bool=args.nyd)
     rkfb_lock = threading.RLock()
 
     try:

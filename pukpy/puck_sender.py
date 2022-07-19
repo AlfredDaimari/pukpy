@@ -11,7 +11,7 @@
 
 import threading
 from time import sleep
-from rolling_keyfobs import RollingKeyFobs
+import rolling_keyfobs as rkfb
 
 
 class PuckBitsYdSenderThread(threading.Thread):
@@ -20,13 +20,13 @@ class PuckBitsYdSenderThread(threading.Thread):
     checks every 0.35s if there is a valid key fob to send
     """
 
-    def __init__(self, id_: str, rkfb_lock: threading.RLock, rolling_kfb: RollingKeyFobs) -> None:
+    def __init__(self, id_: str, rkfb_lock: threading.RLock, rolling_kfb: rkfb.RollingKeyFobs) -> None:
         """
         :param id_: name of thread
         :param rkfb_lock: lock for accessing rolling_key_fobs
         :param rolling_kfb: rolling key fob ds
         """
-        if not isinstance(rolling_kfb, RollingKeyFobs):
+        if not isinstance(rolling_kfb, rkfb.RollingKeyFobs):
             raise TypeError("rolling_kfb is not an instance of RollingKeyFobs")
 
         t_type = type(threading.RLock())

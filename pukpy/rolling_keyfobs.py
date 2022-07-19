@@ -1,15 +1,14 @@
 from time import time_ns as tns
 from typing import List
 from termcolor import cprint
-from rflib import *
-from ydstick import YdStick, YdSendingEvent
-from cars.maruti import MarutiNipponKeyFobPacket
-from cars.toyota import InnovaKeyFobPacket
-from cars.keyfob import KeyFobPacket
+import cars.keyfob
+import cars.toyota
+import cars.maruti
+import ydstick
 
 CAR_FOBS = {
-    "toyota_innova": InnovaKeyFobPacket,
-    "maruti_nippon": MarutiNipponKeyFobPacket
+    "toyota_innova": cars.toyota.InnovaKeyFobPacket,
+    "maruti_nippon": cars.maruti.MarutiNipponKeyFobPacket
 }
 
 
@@ -20,11 +19,11 @@ class RollingKeyFobs:
     structure of key fobs [[KeyFobPacket, KeyFobPacket,...], [KeyFobPacket, ...]]
     """
 
-    def __init__(self, yd_bool: bool) -> None:
+    def __init__(self, yd_bool: bool = True) -> None:
         self.rolling_kfb_list = []
 
-        self.yd_stick = YdStick(init=yd_bool)
-        self.__yd_sending = YdSendingEvent()
+        self.yd_stick = ydstick.YdStick(init=yd_bool)
+        self.__yd_sending = ydstick.YdSendingEvent()
         print("the yardstick has been initialized")
 
     def __len__(self) -> int:
@@ -38,14 +37,14 @@ class RollingKeyFobs:
             str_ += "\n--  next key fob --  \n"
         return str_
 
-    def __shift(self) -> List[KeyFobPacket]:
+    def __shift(self) -> List[cars.keyfob.KeyFobPacket]:
         """
         dequeue the first element from key fob
         """
         return self.rolling_kfb_list.pop(0)
 
     def __create_tmp_kfb_list(self, kfb_bb: List[str], kfb_type: str, bpk_recv_time: int) \
-            -> List[KeyFobPacket]:
+            -> List[cars.keyfob.KeyFobPacket]:
         """
         :param kfb_bb: in form [100001:1, 10000:23]
         :param kfb_type: key fob type
