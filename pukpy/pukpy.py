@@ -12,6 +12,7 @@ from errors.service_exit import ServiceExit
 
 
 def sigint_handler(signal_, frame):
+    print("signal caught")
     raise ServiceExit
 
 

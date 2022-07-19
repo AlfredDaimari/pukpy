@@ -9,7 +9,7 @@ class MarutiNipponKeyFobPacket(KeyFobPacket):
     """
 
     def __init__(self, kfb_list: List[str], kfb_type: str, bpk_recv_time: int) -> None:
-        cfg = YdStickConfig()
+        cfg = YdStickConfig(freq_hz=433920000)
         KeyFobPacket.__init__(self, cfg, kfb_list, kfb_type, bpk_recv_time)
         self.__clean()
 

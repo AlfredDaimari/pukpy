@@ -190,13 +190,7 @@ class YdStick:
         the jamming function that will run in a loop in jamming thread
         :return: None
         """
-        jam_msg_hex = "74727920746F2062656174206279206A616D6D696E67"
-        jam_msg_bytes = bytes.fromhex(jam_msg_hex)
-
-        if self.yd_stick:
-            self.yd_stick.RFxmit(jam_msg_bytes)
-        else:
-            sleep(0.1)  # since no yd_stick, emulate sending by sleeping
+        sleep(0.1)  # can sleep, because yard_stick is in tx_mode
 
     def begin_jamming(self) -> None:
         """
