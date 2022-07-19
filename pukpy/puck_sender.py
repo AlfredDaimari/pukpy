@@ -35,17 +35,17 @@ class PuckBitsYdSenderThread(threading.Thread):
 
         threading.Thread.__init__(self)
         self.name = id_
-        self.lock = rkfb_lock
+        self.rkfb_lock = rkfb_lock
         self.rolling_kfb = rolling_kfb
         self.shutdown = threading.Event()
 
     def run(self) -> None:
         while not self.shutdown.is_set():
 
-            self.lock.acquire()
+            self.rkfb_lock.acquire()
             if self.rolling_kfb.dispatchable:
                 self.rolling_kfb.dequeue_send()
-            self.lock.release()
+            self.rkfb_lock.release()
 
             sleep(0.35)
 
@@ -53,4 +53,5 @@ class PuckBitsYdSenderThread(threading.Thread):
         """
         terminate the thread
         """
+        self.rolling_kfb.yd_stick.stop_jamming()
         self.shutdown.set()

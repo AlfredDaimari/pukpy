@@ -12,7 +12,6 @@ from errors.service_exit import ServiceExit
 
 
 def sigint_handler(signal_, frame):
-    print("received sigint, exiting gracefully")
     raise ServiceExit
 
 
@@ -50,6 +49,7 @@ def main() -> None:
 
         thread1.join()
         thread2.join()
+        print("received sigint, exiting gracefully")
 
 
 main()

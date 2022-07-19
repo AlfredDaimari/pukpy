@@ -23,7 +23,7 @@ class RollingKeyFobs:
         self.rolling_kfb_list = []
 
         self.yd_stick = ydstick.YdStick(init=yd_bool)
-        self.__yd_sending = ydstick.YdSendingEvent()
+        self.yd_stick.begin_jamming()
         print("the yardstick has been initialized")
 
     def __len__(self) -> int:
@@ -34,7 +34,7 @@ class RollingKeyFobs:
         for kfb_list in self.rolling_kfb_list:
             for kfb in kfb_list:
                 str_ += str(kfb)
-            str_ += "\n--  next key fob --  \n"
+            str_ += "\n--  next key fob --\n"
         return str_
 
     def __shift(self) -> List[cars.keyfob.KeyFobPacket]:
@@ -64,12 +64,12 @@ class RollingKeyFobs:
         return self.rolling_kfb_list[-1][-1].kfb_type
 
     @property
-    def sending(self) -> bool:
+    def is_sending(self) -> bool:
         """
         is yd_stick sending or not
         :return: True or False
         """
-        return self.__yd_sending.is_set()
+        return self.yd_stick.is_sending
 
     def get_lst_kfb_recv_time(self) -> int:
         """
@@ -83,21 +83,19 @@ class RollingKeyFobs:
         :param index: the key fob to print from
         """
         for key_fob in self.rolling_kfb_list[index]:
-            cprint(key_fob, "yellow", "on_blue")
-            cprint(f"-- next key fob in index {index} --", "white", "on_green")
+            cprint(key_fob, "yellow")
+            cprint(f"-----", "blue")
 
     def pp_print_all(self) -> None:
         """
         printing all for debugging
         :return: None
         """
-        print("\n\n")
         for i in range(len(self)):
-            cprint(f"key fobs in index {i}", "green", "on_yellow")
+            cprint(f"key fobs in index {i}", "green")
             self.pp_print(i)
-            print("\n")
-            cprint(f"next key fob VVV in index {i + 1}", "green", "on_yellow")
-        print("\n\n")
+            cprint(f"next key fob VVV in index {i + 1}", "green")
+        print("\n")
 
     @property
     def dispatchable(self) -> bool:
@@ -120,18 +118,11 @@ class RollingKeyFobs:
         cprint("key fobs to be sent", "yellow")
         self.pp_print(0)
         kfbs_to_be_sent = self.__shift()
-        print("\n")  # new line
 
         rf_kfb = self.yd_stick.create_rf_kfbs(kfbs_to_be_sent)
-
-        # stop jamming -> start sending -> stop sending -> begin jamming
-        self.yd_stick.stop_jamming()
-        self.__yd_sending.set_sending()
         rf_kfb.send()
-        self.__yd_sending.unset_sending()
-        self.yd_stick.begin_jamming()
 
-        cprint("current rolling key_fobs struct", "yellow")
+        cprint("\ncurrent rolling key_fobs struct", "yellow")
         self.pp_print_all()
 
     def push(self, kfb_bb: List[str], kfb_type: str) -> None:

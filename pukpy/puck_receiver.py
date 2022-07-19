@@ -50,18 +50,18 @@ class PuckReceiver(dbus.service.Object):
         """
         now = datetime.now()
         dt_string = now.strftime("%H:%M:%S %d/%m/%Y")
-        cprint(f"received: {bits} at {dt_string}", "white", "on_yellow")
+        cprint(f"received: {bits} at {dt_string}", "white")
 
         # only push bits when yard stick is not sending ( we may capture our own sent-out bits )
-        if not self.rolling_kfb.sending:
-            self.lock.acquire()
+        if not self.rolling_kfb.is_sending:
+            self.rkfb_lock.acquire()
 
             bits_spl = bits.split('-')
             kfb_type = bits_spl[-1]
             kfb_bb = bits_spl[:-1]
             self.rolling_kfb.push(kfb_bb, kfb_type)
 
-            self.lock.release()
+            self.rkfb_lock.release()
         else:
             cprint("received packets while yd_stick was sending, dropping erroneous packets", "white", "on_red")
 

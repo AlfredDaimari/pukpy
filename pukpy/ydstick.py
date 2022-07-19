@@ -4,7 +4,45 @@ from time import sleep
 from typing import Callable, List
 from rflib import RfCat
 from cars import yd_config as ycfg
-from cars import keyfob as kfb
+from cars import keyfob
+
+
+class RfKeyFob:
+    """
+    create an instance of rf message
+    """
+
+    def __init__(self, kfb_list: List[keyfob.KeyFobPacket], fn: Callable) -> None:
+        """
+        create rf message \n
+        :param kfb_list: list of key fobs to be sent
+        :param fn: the dev fn to be called during sending
+        """
+
+        self.cfg = kfb_list[-1].cfg
+        self.kfb_list = kfb_list
+        self.fn = fn
+
+    def __create_dispatchable_kfbs(self) -> List[bytes]:
+        """
+        create a dispatchable rf message
+        :return: returns [kfb1, kfb2, kfb3, ...]
+
+        """
+        kfb_byte_list = []
+        for kfb in self.kfb_list:
+            kfb.convert_to_hex()
+            packed_msg = bytes.fromhex(kfb.concat_bpk_list())
+            kfb_byte_list.append(packed_msg)
+
+        return kfb_byte_list
+
+    def send(self) -> None:
+        """
+        sends key fob using the yardstick
+        """
+        kfb_byte_arr = self.__create_dispatchable_kfbs()
+        self.fn(self.cfg, kfb_byte_arr)
 
 
 class YdSendingEvent(threading.Event):
@@ -66,66 +104,22 @@ class YdJammingThread(threading.Thread):
     yard stick jamming thread
     """
 
-    def __init__(self, id_: str, jam_ev: YdJammingEvent, fn: Callable) -> None:
+    def __init__(self, id_: str, yd_jam_ev: YdJammingEvent, fn: Callable) -> None:
         """
         :param id_: name of thread
-        :param jam_ev: event which controls opening and closing of thread
+        :param yd_jam_ev: event which controls opening and closing of thread
         """
         threading.Thread.__init__(self)
-        self.name = id_
-        if not isinstance(jam_ev, YdJammingEvent):
+        if not isinstance(yd_jam_ev, YdJammingEvent):
             raise TypeError("jam_ev is not an instance of YdJammingEvent")
-        self.jam_ev = jam_ev
+
+        self.name = id_
+        self.yd_jam_ev = yd_jam_ev
         self.fn = fn
 
     def run(self) -> None:
-        while self.jam_ev.is_set():
+        while self.yd_jam_ev.is_set():
             self.fn()
-
-    def stop(self) -> None:
-        """
-        stop the thread
-        :return: None
-        """
-        self.jam_ev.unset_jamming()
-
-
-class RfKeyFob:
-    """
-    create an instance of rf message
-    """
-
-    def __init__(self, kfb_list: List[kfb.KeyFobPacket], fn: Callable) -> None:
-        """
-        create rf message \n
-        :param kfb_list: list of key fobs to be sent
-        :param fn: the dev fn to be called during sending
-        """
-
-        self.cfg = kfb_list[-1].cfg
-        self.kfb_list = kfb_list
-        self.fn = fn
-
-    def __create_dispatchable_kfbs(self) -> List[bytes]:
-        """
-        create a dispatchable rf message
-        :return: returns [kfb1, kfb2, kfb3, ...]
-
-        """
-        kfb_byte_list = []
-        for kfb in self.kfb_list:
-            kfb.convert_to_hex()
-            packed_msg = bytes.fromhex(kfb.concat_bpk_list())
-            kfb_byte_list.append(packed_msg)
-
-        return kfb_byte_list
-
-    def send(self) -> None:
-        """
-        sends key fob using the yardstick
-        """
-        kfb_byte_arr = self.__create_dispatchable_kfbs()
-        self.fn(self.cfg, kfb_byte_arr)
 
 
 class YdStick:
@@ -137,8 +131,10 @@ class YdStick:
         """
         :param init: default True, if set to false, yd_stick will not be initialized
         """
+        self.__yd_jam_thread = None
+        self.__yd_jam_ev = YdJammingEvent()
+        self.__yd_sending_ev = YdSendingEvent()
         self.yd_stick = RfCat() if init else None
-        self.yd_jam_thread = None
 
     def __update_yd_stick_cfg(self, cfg: ycfg.YdStickConfig) -> None:
         """
@@ -164,19 +160,29 @@ class YdStick:
 
         self.__update_yd_stick_cfg(cfg)
 
+        # stop_jamming -> start_sending -> transmit_all -> stop_sending -> start_jamming
+
+        self.stop_jamming()
+        self.start_sending()
+
         if self.yd_stick:
             for kfb in kfb_byte_list:
                 try:
                     self.yd_stick.setModeTX()
                     self.yd_stick.RFxmit(kfb, repeat=5)
                     self.yd_stick.setModeIDLE()
+
                 except:
                     # TODO: add better logging, better catch clause
                     print("Error in sending message!")
+
+                    self.stop_sending()
                     self.begin_jamming()
                     return
 
         print(f"number of kfb sent - {len(kfb_byte_list)}")
+
+        self.stop_sending()
         self.begin_jamming()
 
     def __jam_fn(self):
@@ -198,32 +204,53 @@ class YdStick:
         :return: None
         """
 
-        jam_cfg = ycfg.YdStickConfig()
+        jam_cfg = ycfg.YdStickConfig(freq_hz=433200000)
         self.__update_yd_stick_cfg(jam_cfg)
-        jam_ev = YdJammingEvent()
-        jam_ev.set_jamming()
-        self.yd_jam_thread = YdJammingThread('jam_th', jam_ev, self.__jam_fn)
-        self.yd_jam_thread.start()
-        cprint("started jamming", "white", "on_blue")
+        self.__yd_jam_ev.set_jamming()
+        self.__yd_jam_thread = YdJammingThread('jam_th', self.__yd_jam_ev, self.__jam_fn)
+        self.__yd_jam_thread.start()
+        cprint("started jamming", "red")
 
     def stop_jamming(self) -> None:
         """
         stop jamming using the yard stick
         :return: None
         """
-        self.yd_jam_thread.stop()
-        self.yd_jam_thread.join()
+        self.__yd_jam_ev.unset_jamming()
+        self.__yd_jam_thread.join()
         sleep(0.1)
-        self.yd_jam_thread = None
-        cprint("stopped jamming", "white", "on_blue")
+        self.__yd_jam_thread = None
+        cprint("stopped jamming", "red")
 
-    def create_rf_kfbs(self, kfb_list: List[kfb.KeyFobPacket]) -> RfKeyFob:
+    def start_sending(self):
+        """
+        start sending event of yardstick
+        :return: None
+        """
+        self.__yd_sending_ev.set_sending()
+
+    @property
+    def is_sending(self):
+        """
+        is yardstick sending key fobs ?
+        :return: True of False
+        """
+        return self.__yd_sending_ev.is_set()
+
+    def stop_sending(self):
+        """
+        stop sending event in yardstick
+        :return: None
+        """
+        self.__yd_sending_ev.unset_sending()
+
+    def create_rf_kfbs(self, kfb_list: List[keyfob.KeyFobPacket]) -> RfKeyFob:
         """
         :param kfb_list: list of key fobs to be sent
         :return: instance of RfKeyFob
         """
 
-        if not isinstance(kfb_list[0], kfb.KeyFobPacket):
+        if not isinstance(kfb_list[0], keyfob.KeyFobPacket):
             raise TypeError("msg is not an instance of KeyFobPacket")
 
         return RfKeyFob(kfb_list, self.__send_kfbs)

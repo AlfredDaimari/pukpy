@@ -132,9 +132,9 @@ class KeyFobPacket:
         return len(self.bpk_list)
 
     def __str__(self):
-        str_ = "\n"
+        str_ = ""
         for i in range(len(self.bpk_list)):
-            str_ += self.bpk_list[i].__str__() + f" ----- {i + 1} \n"
+            str_ += self.bpk_list[i].__str__() + f" ----- {i + 1}\n"
         return str_
 
     def __clean(self):
