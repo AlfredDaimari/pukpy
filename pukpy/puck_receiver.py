@@ -17,9 +17,9 @@ from datetime import datetime
 from termcolor import cprint
 import rolling_keyfobs as rkfb
 
-OPATH = "/org/autosec/PuckBitsReceiver"
-IFACE = "org.autosec.PuckBitsReceiverInterface"
-BUS_NAME = "org.autosec.PuckBitsReceiver"
+OPATH = "/org/autosec/PuckReceiver"
+IFACE = "org.autosec.PuckReceiverInterface"
+BUS_NAME = "org.autosec.PuckReceiver"
 
 
 class PuckReceiver(dbus.service.Object):
