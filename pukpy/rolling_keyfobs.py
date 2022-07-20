@@ -2,6 +2,7 @@ import json
 from time import time_ns as tns
 from typing import List
 from termcolor import cprint
+import threading
 import cars.keyfob
 import cars.toyota
 import cars.maruti
@@ -22,6 +23,7 @@ class RollingKeyFobs:
 
     def __init__(self, yd_bool: bool = True) -> None:
         self.rolling_kfb_list = []
+        self.cli_send_event = threading.Event()         # for sending from cli
 
         self.yd_stick = ydstick.YdStick(init=yd_bool)
         self.yd_stick.begin_jamming()

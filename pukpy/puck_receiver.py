@@ -80,6 +80,11 @@ class PuckReceiver(dbus.service.Object):
             msg = self.rolling_kfb.to_json()
             self.rkfb_lock.release()
 
+        if com == "send-rkfb":
+            self.rolling_kfb.cli_send_event.set()   # set send event to send
+            msg = "one key fob in rkfb sent"
+            # TODO: send json of message sent from pukpy
+
         return msg
 
 

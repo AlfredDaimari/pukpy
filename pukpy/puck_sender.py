@@ -43,8 +43,17 @@ class PuckBitsYdSenderThread(threading.Thread):
         while not self.shutdown.is_set():
 
             self.rkfb_lock.acquire()
+
             if self.rolling_kfb.dispatchable:
                 self.rolling_kfb.dequeue_send()
+
+            # received send from pukpy_cli
+            if self.rolling_kfb.cli_send_event.is_set():
+                self.rolling_kfb.cli_send_event.clear()
+
+                if len(self.rolling_kfb) > 0:   # only send if there is a key-fob to be sent
+                    self.rolling_kfb.dequeue_send()
+
             self.rkfb_lock.release()
 
             sleep(0.35)
