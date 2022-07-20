@@ -5,7 +5,7 @@ from ..ydstick import YdStickConfig
 
 class KiaCarrenceKeyFobPacket(KeyFobPacket):
     """
-    data structure to hold maruti nippon key fob
+    data structure to hold kia carrence key fob
     """
 
     def __init__(self, kfb_list: List[str], kfb_type: str, bpk_recv_time: int) -> None:
@@ -15,7 +15,7 @@ class KiaCarrenceKeyFobPacket(KeyFobPacket):
 
     def __clean(self):
         """
-        cleans up the bpk for maruti
+        cleans up the bpk for kia
         :return: None
         """
         self.bpk_list[0].bpk_drop(371)
@@ -30,7 +30,7 @@ class KiaCarrenceKeyFobPacket(KeyFobPacket):
         return kfb_list
 
     def concat_bpk_list(self) -> str:
-        str_ = "0" * 8 + "10" * 238 + "1"
+        str_ = "00" + "a" * 119 + "8"
         str_ += ":" + "0.072" + ":"
         str_ += self.bpk_list[0].bpk
         return str_
